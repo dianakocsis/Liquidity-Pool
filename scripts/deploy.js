@@ -1,3 +1,5 @@
+const { ethers } = require("hardhat");
+
 async function main() {
 
     const [deployer] = await ethers.getSigners();
@@ -5,6 +7,9 @@ async function main() {
     console.log("Deploying contracts with the account:", deployer.address);
   
     console.log("Account balance:", (await deployer.getBalance()).toString());
+
+    const Lib = await ethers.getContractFactory("SpaceLib");
+    const lib = await Lib.deploy();
   
     const Pool = await ethers.getContractFactory("Pool");
     const pool = await Pool.deploy();
@@ -18,6 +23,7 @@ async function main() {
     const SpaceCoin = await ethers.getContractFactory("SpaceCoin");
     const spaceCoin = await SpaceCoin.deploy(spaceICO.address, deployer.address);
   
+    console.log("Space Lib address", lib.address);
     console.log("Pool address:", pool.address);
     console.log("Space Router address:", sr.address);
     console.log("Space ICO address:", spaceICO.address);

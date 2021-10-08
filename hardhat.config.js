@@ -2,7 +2,7 @@ require("@nomiclabs/hardhat-waffle");
 
 // Go to https://www.alchemyapi.io, sign up, create
 // a new App in its dashboard, and replace "KEY" with its key
-const ALCHEMY_API_KEY = "5WYWXukDTJzt4PrgMYAXQ6jzja7cr4lf";
+const ALCHEMY_API_KEY = "QBrdMPVUgs53h07QLEzqyW8rOCYsn8kE";
 
 // Replace this private key with your Ropsten account private key
 // To export your private key from Metamask, open Metamask and
