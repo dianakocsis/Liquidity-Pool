@@ -12,7 +12,6 @@ import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
 contract Pool is ERC20 {
 
     uint public constant MINIMUM_LIQUIDITY = 10**3;
-    bytes4 private constant SELECTOR = bytes4(keccak256(bytes('transfer(address,uint256)')));
     address public spaceCoin;
     uint112 private reserve0;           
     uint112 private reserve1;
