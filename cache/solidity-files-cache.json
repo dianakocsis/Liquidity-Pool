@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/diana/solidity/optillistic/Liquidity-Pool/contracts/Pool.sol": {
-      "lastModificationDate": 1633674250316,
-      "contentHash": "3d71d31fce9d7db8b2c089691eae4448",
+      "lastModificationDate": 1634278005056,
+      "contentHash": "7a9091046f53e0080845f75c4b057114",
       "sourceName": "contracts/Pool.sol",
       "solcConfig": {
         "version": "0.8.0",
@@ -30,7 +30,6 @@
       "imports": [
         "./SpaceLib.sol",
         "./SpaceCoin.sol",
-        "./SpaceICO.sol",
         "@openzeppelin/contracts/access/Ownable.sol",
         "@openzeppelin/contracts/token/ERC20/ERC20.sol",
         "@uniswap/lib/contracts/libraries/Babylonian.sol",
@@ -79,8 +78,8 @@
       ]
     },
     "/Users/diana/solidity/optillistic/Liquidity-Pool/contracts/SpaceCoin.sol": {
-      "lastModificationDate": 1633674250318,
-      "contentHash": "caeffc12224c9db92b1e9ada0003d2d3",
+      "lastModificationDate": 1634240669419,
+      "contentHash": "abdb387ab8504e42709c60936f07db71",
       "sourceName": "contracts/SpaceCoin.sol",
       "solcConfig": {
         "version": "0.8.0",
@@ -117,8 +116,8 @@
       ]
     },
     "/Users/diana/solidity/optillistic/Liquidity-Pool/contracts/SpaceICO.sol": {
-      "lastModificationDate": 1633674250316,
-      "contentHash": "4319301193753877f11ca9a0b2d112bd",
+      "lastModificationDate": 1634270597278,
+      "contentHash": "71c59aa407dcdc9517d02846dfc1b37f",
       "sourceName": "contracts/SpaceICO.sol",
       "solcConfig": {
         "version": "0.8.0",
@@ -440,8 +439,8 @@
       ]
     },
     "/Users/diana/solidity/optillistic/Liquidity-Pool/contracts/SpaceRouter.sol": {
-      "lastModificationDate": 1633674250317,
-      "contentHash": "579fbb2eaed0a27574f9165dd29a65d4",
+      "lastModificationDate": 1634277456674,
+      "contentHash": "65470ce85db52bd932556a7c5230252b",
       "sourceName": "contracts/SpaceRouter.sol",
       "solcConfig": {
         "version": "0.8.0",
@@ -511,6 +510,40 @@
       ],
       "artifacts": [
         "Pausable"
+      ]
+    },
+    "/Users/diana/solidity/optillistic/Liquidity-Pool/node_modules/hardhat/console.sol": {
+      "lastModificationDate": 1633674267299,
+      "contentHash": "cc4777addd464ea56fa35b1c45df0591",
+      "sourceName": "hardhat/console.sol",
+      "solcConfig": {
+        "version": "0.8.0",
+        "settings": {
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.22 <0.9.0"
+      ],
+      "artifacts": [
+        "console"
       ]
     }
   }

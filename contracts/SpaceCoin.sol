@@ -12,8 +12,8 @@ contract SpaceCoin is ERC20, Ownable {
 
     constructor(address _ico, address _treasury) ERC20("Space", "SPC") {
         uint icoAmount = 2 * ( SpaceLib.ONE_COIN * 30000 * EXCHANGE_RATE);
-        _mint(_ico, icoAmount);
-        _mint(_treasury, SpaceLib.MAX_COINS - icoAmount);
+        _mint(_ico, icoAmount);                             // ico has 300K space coins
+        _mint(_treasury, SpaceLib.MAX_COINS - icoAmount);   // treasury has 200K space coins
         treasury = _treasury;
     }
 

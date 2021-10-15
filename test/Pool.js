@@ -25,14 +25,7 @@ describe("Pool.sol", function () {
       [owner, ico, treas] = await ethers.getSigners();
       spaceCoin = await SpaceCoin.deploy(ico.address, treas.address);
 
-      await pool.initialize(spaceCoin.address, spaceICO.address);
-
-
-      //spaceICO.toGeneral();
-      //spaceICO.toOpen();
-      //await spaceICO.connect(addr2).contribute({
-      //  value: parseEther("1000")
-      //});
+      await pool.initialize(spaceCoin.address);
       
     });
 

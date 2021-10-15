@@ -61,7 +61,7 @@ contract SpaceICO is Ownable, Pausable {
         if (phase == Phase.General) {
             return GENERAL_LIMIT - totalContributed;
         }
-        return (spaceCoin.balanceOf(address(this)) / ICO_EXCHANGE_RATE) - totalContributed;
+        return ((spaceCoin.balanceOf(address(this)) / 2 ) / ICO_EXCHANGE_RATE) - totalContributed;             // 150K / 5 = 30K 
     }
 
     function availableForMeToContribute() public view returns (uint) {
@@ -126,10 +126,12 @@ contract SpaceICO is Ownable, Pausable {
        require(success, "WITHDRAW_FAILED");
    }
 
+    // contract has 300K space coins
+    // 
    function withdrawToPool() external onlyOwner {
-       uint spcTransferAmt = address(this).balance * ICO_EXCHANGE_RATE;
+       uint spcTransferAmt = totalContributed * ICO_EXCHANGE_RATE; // get the equivalent amount of space tokens for eth contributed: 150K space coins, 30K ETH
        spaceCoin.approve(address(sr), spcTransferAmt);
-       (,,uint liquidity) = sr.addLiquidity{value: address(this).balance}(address(spaceCoin), spcTransferAmt, address(this));
+       (uint liquidity) = sr.addLiquidity{value: totalContributed}(address(spaceCoin), spcTransferAmt, address(this));
        Pool(lpool).approve(address(sr), liquidity);
     }
 
