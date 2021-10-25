@@ -42,7 +42,7 @@ contract Pool is ERC20 {
     }
 
     function _update(uint balance0, uint balance1) private {
-        require(balance0 <= 2**112-1 && balance1 <= 2**112-1, 'OVERFLOW');
+        require(balance0 <= 2**256-1 && balance1 <= 2**256-1, 'OVERFLOW');
         reserve0 = uint112(balance0);
         reserve1 = uint112(balance1);
         emit Sync(reserve0, reserve1);
@@ -98,7 +98,7 @@ contract Pool is ERC20 {
         require(amountOut < _reserve, 'INSUFFICIENT_LIQUIDITY');
         uint balance0;
         uint balance1;
-        { 
+        
         address _spaceCoin = spaceCoin;
         require(to != _spaceCoin, 'INVALID_TO');
         if (value > 0) {
@@ -109,7 +109,7 @@ contract Pool is ERC20 {
         }
         balance0 = SpaceCoin(spaceCoin).balanceOf(address(this));
         balance1 = address(this).balance;
-        }
+        
         _update(balance0, balance1);
     }
     
