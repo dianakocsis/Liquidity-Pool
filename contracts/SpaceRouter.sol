@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "./Pool.sol";
 import "./SpaceCoin.sol";
 
+/// @title Router contract
 contract SpaceRouter {
 
     Pool public immutable pool;
@@ -14,11 +15,18 @@ contract SpaceRouter {
     error InsufficientLiquidity();
     error InsufficientOutputAmount(uint256 out, uint256 min);
 
+    /// @notice Sets the Pool and SpaceCoin contracts
     constructor(Pool _lp, SpaceCoin _spaceCoin) {
         pool = _lp;
         spaceCoin = _spaceCoin;
     }
 
+    /// @notice Adds spaceCoin and Ether liquidity to the pool
+    /// @param _to The address to mint the liquidity tokens to
+    /// @param _amountSpc The amount of SpaceCoin to add
+    /// @return amountEth The amount of Ether added
+    /// @return amountSpc The amount of SpaceCoin added
+    /// @return liquidity The amount of liquidity tokens minted
     function addLiquidity(
         address _to,
         uint256 _amountSpc
@@ -58,6 +66,11 @@ contract SpaceRouter {
         }
     }
 
+    /// @notice Removes spaceCoin and Ether liquidity from the pool
+    /// @param _liquidity The amount of liquidity tokens to burn
+    /// @param _to The address to send the Ether and SpaceCoin to
+    /// @return ethAmount The amount of Ether returned
+    /// @return spcAmount The amount of SpaceCoin returned
     function removeLiquidity(
         uint256 _liquidity,
         address _to
@@ -72,6 +85,11 @@ contract SpaceRouter {
         (ethAmount, spcAmount) = pool.burn(_to);
     }
 
+    /// @notice Swaps SpaceCoin for Ether
+    /// @param _amountSpcIn The amount of SpaceCoin to swap
+    /// @param _minEthOut The minimum amount of Ether to receive
+    /// @param _to The address to send the Ether to
+    /// @return amountEthOut The amount of Ether received
     function swapSpcForEth(
         uint256 _amountSpcIn,
         uint256 _minEthOut,
@@ -100,6 +118,10 @@ contract SpaceRouter {
         }
     }
 
+    /// @notice Swaps Ether for SpaceCoin
+    /// @param _minSpcOut The minimum amount of SpaceCoin to receive
+    /// @param _to The address to send the SpaceCoin to
+    /// @return amountSpcOut The amount of SpaceCoin received
     function swapEthForSpc(
         uint256 _minSpcOut,
         address _to
