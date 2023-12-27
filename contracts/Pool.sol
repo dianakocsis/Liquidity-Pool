@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "./SpaceCoin.sol";
 
+/// @title Pool contract
 contract Pool is ERC20 {
 
     SpaceCoin public immutable spaceCoin;
@@ -18,11 +19,17 @@ contract Pool is ERC20 {
     error InsufficientLiquidity();
     error InsufficientLiquidityBurned();
     error FailedToSendEther();
+    error FailedToTransferSpc();
 
+    /// @notice Sets the SpaceCoin contract
+    /// @param _name The name of the token
+    /// @param _symbol The symbol of the token
+    /// @param _spaceCoin The SpaceCoin contract
     constructor(string memory _name, string memory _symbol, SpaceCoin _spaceCoin) ERC20(_name, _symbol) {
         spaceCoin = _spaceCoin;
     }
 
+    /// @dev Modifier to check if the contract is locked
     modifier nonReentrant() {
         if (locked) {
             revert NoReentrancy();
@@ -32,10 +39,14 @@ contract Pool is ERC20 {
         locked = false;
     }
 
+    /// @notice Gets the reserves of the pool
     function getReserves() external view returns (uint256, uint256) {
         return (ethReserve, spcReserve);
     }
 
+    /// @notice Mints liquidity tokens
+    /// @param _to The address to mint to
+    /// @return liquidity The amount of liquidity tokens minted
     function mint(address _to) external nonReentrant returns (uint256 liquidity) {
         uint256 ethBalance = address(this).balance;
         uint256 spcBalance = spaceCoin.balanceOf(address(this));
@@ -59,6 +70,10 @@ contract Pool is ERC20 {
         _mint(_to, liquidity);
     }
 
+    /// @notice Burns liquidity tokens
+    /// @param _to The address to send the tokens and ether to
+    /// @return ethAmount The amount of ether sent
+    /// @return spcAmount The amount of SpaceCoin sent
     function burn(address _to) external nonReentrant returns (uint256 ethAmount, uint256 spcAmount) {
         uint256 ethBalance = address(this).balance;
         uint256 spcBalance = spaceCoin.balanceOf(address(this));
@@ -78,7 +93,7 @@ contract Pool is ERC20 {
 
         bool success = spaceCoin.transfer(_to, spcAmount);
         if (!success) {
-            revert();
+            revert FailedToTransferSpc();
         }
 
         (bool sent,) = _to.call{value: ethAmount}("");
@@ -90,6 +105,9 @@ contract Pool is ERC20 {
         spcReserve = spaceCoin.balanceOf(address(this));
     }
 
+    /// @notice Swaps ether for SpaceCoin or SpaceCoin for ether
+    /// @param _to The address to send the tokens or ether to
+    /// @return out The amount of ether or SpaceCoin sent
     function swap(address _to) external nonReentrant returns (uint256 out) {
         uint256 ethBalance = address(this).balance;
         uint256 spcBalance = spaceCoin.balanceOf(address(this));
@@ -102,7 +120,7 @@ contract Pool is ERC20 {
             out = (numerator / denominator);
             bool success = spaceCoin.transfer(_to, out);
             if (!success) {
-                revert();
+                revert FailedToTransferSpc();
             }
         } else if (spcAmount > 0) {
             uint256 amountSpcWithFee = spcAmount * 99;
@@ -119,12 +137,20 @@ contract Pool is ERC20 {
         spcReserve = spaceCoin.balanceOf(address(this));
     }
 
+    /// @notice Allows the contract to receive ether
     receive() external payable {}
 
+    /// @notice Determines the minimum of two values
+    /// @param a The first value
+    /// @param b The second value
+    /// @return The minimum of the two values
     function _min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
     }
 
+    /// @notice Calculates the square root of a number
+    /// @param y The number to calculate the square root of
+    /// @return z The square root of the number
     function _sqrt(uint256 y) internal pure returns (uint256 z) {
         if (y > 3) {
             z = y;
