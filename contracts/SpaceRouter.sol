@@ -55,13 +55,18 @@ contract SpaceRouter {
         }
     }
 
-    // **** REMOVE LIQUIDITY ****
     function removeLiquidity(
-        uint liquidity,
-        address to
-    ) public returns (uint amount0, uint amount1) {
-        Pool(pool).transferFrom(msg.sender, address(pool), liquidity); // send liquidity to pool
-        (amount0, amount1) = Pool(pool).burn(to);
+        uint256 _liquidity,
+        address _to
+    )
+        external
+        returns (uint256 ethAmount, uint256 spcAmount)
+    {
+        bool success = pool.transferFrom(msg.sender, address(pool), _liquidity);
+        if (!success) {
+            revert();
+        }
+        (ethAmount, spcAmount) = pool.burn(_to);
     }
 
     function swapExactTokensForETH(

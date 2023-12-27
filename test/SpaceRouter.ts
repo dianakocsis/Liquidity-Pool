@@ -144,4 +144,90 @@ describe('SpaceRouter', function () {
         .addLiquidity(addr1.address, tokens('5'), { value: tokens('1') });
     });
   });
+
+  describe('Removing liquidity', function () {
+    it('removing liquidity', async function () {
+      await ico.connect(addr1).contribute({ value: tokens('1500') });
+      await ico.connect(owner).withdraw(tokens('1500'));
+
+      await spaceCoin
+        .connect(treasury)
+        .approve(spaceRouter.target, tokens('5'));
+      await spaceRouter
+        .connect(treasury)
+        .addLiquidity(treasury.getAddress(), tokens('5'), {
+          value: tokens('1'),
+        });
+      let liquidityTreasuryAmt = await pool.balanceOf(treasury.address);
+      console.log('liquiduty treasury amt is ', liquidityTreasuryAmt);
+      await pool.connect(treasury).approve(spaceRouter.target, tokens('5'));
+      let totalSupply = await pool.totalSupply();
+      let liquidity = tokens('1');
+      let ethPoolBalance = await ethers.provider.getBalance(pool.getAddress());
+      let spcPoolBalance = await spaceCoin.balanceOf(pool.target);
+      let spcTreasuryBalance = await spaceCoin.balanceOf(treasury);
+      let ethAmount = (liquidity * ethPoolBalance) / totalSupply;
+      let spcAmount = (liquidity * spcPoolBalance) / totalSupply;
+      await spaceRouter
+        .connect(treasury)
+        .removeLiquidity(tokens('1'), treasury.address);
+      let expectedEthBalance = ethPoolBalance - ethAmount;
+      let expectedSpcBalance = spcPoolBalance - spcAmount;
+      expect(await ethers.provider.getBalance(pool.target)).to.equal(
+        expectedEthBalance
+      );
+      expect(await spaceCoin.balanceOf(pool.target)).to.equal(
+        expectedSpcBalance
+      );
+      expect(await spaceCoin.balanceOf(treasury)).to.equal(
+        spcTreasuryBalance + spcAmount
+      );
+    });
+
+    it('Emit event', async function () {
+      await ico.connect(addr1).contribute({ value: tokens('1500') });
+      await ico.connect(owner).withdraw(tokens('1500'));
+
+      await spaceCoin
+        .connect(treasury)
+        .approve(spaceRouter.target, tokens('5'));
+      await spaceRouter
+        .connect(treasury)
+        .addLiquidity(treasury.getAddress(), tokens('5'), {
+          value: tokens('1'),
+        });
+      await pool.connect(treasury).approve(spaceRouter.target, tokens('5'));
+      let totalSupply = await pool.totalSupply();
+      let liquidity = tokens('1');
+      let ethPoolBalance = await ethers.provider.getBalance(pool.getAddress());
+      let spcPoolBalance = await spaceCoin.balanceOf(pool.target);
+      let ethAmount = (liquidity * ethPoolBalance) / totalSupply;
+      let spcAmount = (liquidity * spcPoolBalance) / totalSupply;
+      await expect(
+        spaceRouter
+          .connect(treasury)
+          .removeLiquidity(tokens('1'), treasury.address)
+      )
+        .to.emit(pool, 'Burn')
+        .withArgs(spaceRouter.target, ethAmount, spcAmount, treasury.address);
+    });
+
+    it('Insufficient Liquidity Burned', async function () {
+      await ico.connect(addr1).contribute({ value: tokens('1500') });
+      await ico.connect(owner).withdraw(tokens('1500'));
+
+      await spaceCoin
+        .connect(treasury)
+        .approve(spaceRouter.target, tokens('5'));
+      await spaceRouter
+        .connect(treasury)
+        .addLiquidity(treasury.getAddress(), tokens('5'), {
+          value: tokens('1'),
+        });
+      await pool.connect(treasury).approve(spaceRouter.target, tokens('5'));
+      await expect(
+        spaceRouter.connect(treasury).removeLiquidity(1n, treasury.address)
+      ).to.be.revertedWithCustomError(pool, 'InsufficientLiquidityBurned');
+    });
+  });
 });

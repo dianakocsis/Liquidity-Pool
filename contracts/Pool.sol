@@ -18,6 +18,9 @@ contract Pool is ERC20 {
     uint private unlocked = 1;
 
     error NoReentrancy();
+    error InsufficientLiquidity();
+    error InsufficientLiquidityBurned();
+    error FailedToSendEther();
 
     modifier lock() {
         require(unlocked == 1, 'LOCKED');
@@ -79,21 +82,35 @@ contract Pool is ERC20 {
         _mint(_to, liquidity);
     }
 
-    function burn(address to) external lock returns(uint amount0, uint amount1) {
-        uint liquidity = balanceOf(address(this));          // how many LP tokens this contract has
-        uint totalSupply = totalSupply();                   // total supply of LP tokens
-        amount0 = (liquidity * reserve0 ) / totalSupply;     // using balances ensures pro-rata distribution
-        amount1 = (liquidity * reserve1) / totalSupply;     // using balances ensures pro-rata distribution
-        require(amount0 > 0 && amount1 > 0, 'INSUFFICIENT_LIQUIDITY_BURNED');
-        _burn(address(this), liquidity);
-        SpaceCoin(spaceCoin).transfer(to, amount0);
-        (bool success, ) = to.call{ value: amount1 }("");
-        require(success, "WITHDRAW_FAILED");
-        uint balance0 = address(this).balance;
-        uint balance1 = SpaceCoin(spaceCoin).balanceOf(address(this));
-        _update(balance0, balance1);
-        emit Burn(msg.sender, amount0, amount1, to);
+    function burn(address _to) external nonReentrant returns (uint256 ethAmount, uint256 spcAmount) {
+        uint256 ethBalance = address(this).balance;
+        uint256 spcBalance = spaceCoin.balanceOf(address(this));
+        uint256 liquidity = balanceOf(address(this));
+        uint256 totalSupply = totalSupply();
 
+        ethAmount = liquidity * ethBalance / totalSupply;
+        spcAmount = liquidity * spcBalance / totalSupply;
+
+        if (ethAmount == 0 || spcAmount == 0) {
+            revert InsufficientLiquidityBurned();
+        }
+
+        emit Burn(msg.sender, ethAmount, spcAmount, _to);
+
+        _burn(address(this), liquidity);
+
+        bool success = spaceCoin.transfer(_to, spcAmount);
+        if (!success) {
+            revert();
+        }
+
+        (bool sent,) = _to.call{value: ethAmount}("");
+        if (!sent) {
+            revert FailedToSendEther();
+        }
+
+        ethReserve = address(this).balance;
+        spcReserve = spaceCoin.balanceOf(address(this));
     }
 
     function swap(uint amountOut, address to, uint value) external lock {
