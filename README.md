@@ -47,3 +47,10 @@ All files | 99.07 | 77.5 | 100 | 91.76 | |
 &nbsp;
 
 ## Testnet Deploy Information
+
+| Contract    | Address Etherscan Link                                                                 |
+| ----------- | -------------------------------------------------------------------------------------- |
+| SpaceCoin   | `https://sepolia.etherscan.io/address/0xf50443Dd4558EE696440239ED1dBbe82513B126d#code` |
+| SpaceICO    | `https://sepolia.etherscan.io/address/0x78FD10E56327e10cFF9DBdAb4c4994EA88135Ee9#code` |
+| Pool        | `https://sepolia.etherscan.io/address/0xf4aF2b797d0723c50a9692726EE7cD7900a8ddEf#code` |
+| SpaceRouter | `https://sepolia.etherscan.io/address/0x724348dF0c48be5E5be32fa3b8812a92e4ef50Bc#code` |
