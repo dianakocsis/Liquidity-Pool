@@ -25,5 +25,5 @@ Transferring tokens to an LP pool requires two transactions:
 
 Write a router contract to handles these transactions. Be sure it can:
 
-    - Add / remove liquidity, without wasting or donating user funds.
-    - Swap tokens, allowing traders to specify a minimum amount out for the output token.
+- Add / remove liquidity, without wasting or donating user funds.
+- Swap tokens, allowing traders to specify a minimum amount out for the output token.
