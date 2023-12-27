@@ -143,6 +143,35 @@ describe('SpaceRouter', function () {
         .connect(addr1)
         .addLiquidity(addr1.address, tokens('5'), { value: tokens('1') });
     });
+
+    it('Adding liqudity with tax enabled + returning extra eth', async function () {
+      await ico.connect(addr1).contribute({ value: tokens('1500') });
+      await ico.connect(owner).withdraw(tokens('1500'));
+      await spaceCoin
+        .connect(treasury)
+        .approve(spaceRouter.target, tokens('5'));
+      await spaceRouter
+        .connect(treasury)
+        .addLiquidity(treasury.getAddress(), tokens('5'), {
+          value: tokens('1'),
+        });
+      await ico.advancePhase(0);
+      await ico.advancePhase(1);
+      await ico.connect(addr1).redeem();
+      await spaceCoin.connect(addr1).approve(spaceRouter.target, tokens('5'));
+      await spaceCoin.connect(owner).toggleTax(true);
+      let ethBefore = await ethers.provider.getBalance(pool.getAddress());
+      let spaceDepositedAfterTax = (tokens('5') * 98n) / 100n;
+      let amountEth =
+        (spaceDepositedAfterTax * (await pool.ethReserve())) /
+        (await pool.spcReserve());
+      await spaceRouter
+        .connect(addr1)
+        .addLiquidity(addr1.address, tokens('5'), { value: tokens('1') });
+      expect(await ethers.provider.getBalance(pool.getAddress())).to.equal(
+        ethBefore + amountEth
+      );
+    });
   });
 
   describe('Removing liquidity', function () {
