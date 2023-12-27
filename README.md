@@ -27,3 +27,23 @@ Write a router contract to handles these transactions. Be sure it can:
 
 - Add / remove liquidity, without wasting or donating user funds.
 - Swap tokens, allowing traders to specify a minimum amount out for the output token.
+
+&nbsp;
+
+## Code Coverage Report
+
+------------------|----------|----------|----------|----------|----------------|
+File | % Stmts | % Branch | % Funcs | % Lines |Uncovered Lines |
+------------------|----------|----------|----------|----------|----------------|
+contracts/ | 99.07 | 77.5 | 100 | 91.76 | |
+Pool.sol | 97.56 | 56.25 | 100 | 90.77 |... 123,132,163 |
+SpaceCoin.sol | 100 | 100 | 100 | 100 | |
+SpaceICO.sol | 100 | 91.3 | 100 | 94.23 | 97,131,135 |
+SpaceRouter.sol | 100 | 75 | 100 | 87.76 |... ,86,115,146 |
+------------------|----------|----------|----------|----------|----------------|
+All files | 99.07 | 77.5 | 100 | 91.76 | |
+------------------|----------|----------|----------|----------|----------------|
+
+&nbsp;
+
+## Testnet Deploy Information
