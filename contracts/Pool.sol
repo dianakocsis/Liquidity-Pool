@@ -7,11 +7,18 @@ import "./SpaceCoin.sol";
 contract Pool is ERC20 {
 
     SpaceCoin public immutable spaceCoin;
+    uint256 public ethReserve;
+    uint256 public spcReserve;
     uint public constant MINIMUM_LIQUIDITY = 10**3;
     uint112 private reserve0;           
     uint112 private reserve1;
 
+    bool public locked;
+
     uint private unlocked = 1;
+
+    error NoReentrancy();
+
     modifier lock() {
         require(unlocked == 1, 'LOCKED');
         unlocked = 0;
@@ -32,6 +39,16 @@ contract Pool is ERC20 {
         spaceCoin = _spaceCoin;
     }
 
+    modifier nonReentrant() {
+        if (locked) {
+            revert NoReentrancy();
+        }
+        locked = true;
+        _;
+        locked = false;
+    }
+
+
     function _update(uint balance0, uint balance1) private {
         require(balance0 <= 2**256-1 && balance1 <= 2**256-1, 'OVERFLOW');
         reserve0 = uint112(balance0);
@@ -39,25 +56,27 @@ contract Pool is ERC20 {
         emit Sync(reserve0, reserve1);
     }
 
-    function mint(address to) external lock returns (uint liquidity) {
-        (uint112 _reserve0, uint112 _reserve1) = getReserves(); 
-        uint balance0 = SpaceCoin(spaceCoin).balanceOf(address(this));
-        uint balance1 = address(this).balance;
-        uint amount0 = balance0 - _reserve0;
-        uint amount1 = balance1 - _reserve1;
-        uint totalSupply = totalSupply();
-        // first time total supply is 0
-        if (totalSupply == 0) {
-            liquidity = _sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
+    function mint(address _to) external nonReentrant returns (uint256 liquidity) {
+        uint256 ethBalance = address(this).balance;
+        uint256 spcBalance = spaceCoin.balanceOf(address(this));
+        uint256 ethAmount = ethBalance - ethReserve;
+        uint256 spcAmount = spcBalance - spcReserve;
+
+        emit Mint(msg.sender, ethAmount, spcAmount);
+
+        if (totalSupply() == 0) {
+            liquidity = _sqrt(ethAmount * spcAmount);
+        } else {
+            liquidity = _min(
+                ethAmount * totalSupply() / ethReserve,
+                spcAmount * totalSupply() / spcReserve
+            );
         }
-        else {
-            liquidity = _min((amount0 * totalSupply) / _reserve0,
-                                 (amount1 * totalSupply) / _reserve1);
-        }
-        require(liquidity > 0, 'INSUFFICIENT_LIQUIDITY_MINTED');
-        _mint(to, liquidity);                                       // mint these LP tokens to the address
-        _update(balance0, balance1);                                // update reserves
-        emit Mint(msg.sender, amount0, amount1);
+
+        ethReserve = ethBalance;
+        spcReserve = spcBalance;
+
+        _mint(_to, liquidity);
     }
 
     function burn(address to) external lock returns(uint amount0, uint amount1) {
