@@ -14,6 +14,8 @@ contract SpaceRouter {
     error InsufficientAmount();
     error InsufficientLiquidity();
     error InsufficientOutputAmount(uint256 out, uint256 min);
+    error FailedToTransferLiquidityToPool();
+    error FailedToTransferSpc();
 
     /// @notice Sets the Pool and SpaceCoin contracts
     constructor(Pool _lp, SpaceCoin _spaceCoin) {
@@ -40,8 +42,9 @@ contract SpaceRouter {
             (amountEth, amountSpc) = (msg.value, _amountSpc);
         } else {
             amountSpc = msg.value * spcReserve / ethReserve;
-            if (_amountSpc <= _amountSpc) {
+            if (_amountSpc <= amountSpc) {
                 amountEth = _amountSpc * ethReserve / spcReserve;
+                amountSpc = _amountSpc;
             }
 
             if (spaceCoin.taxEnabled()) {
@@ -51,7 +54,7 @@ contract SpaceRouter {
          }
         bool success = spaceCoin.transferFrom(msg.sender, address(pool), amountSpc);
         if (!success) {
-            revert();
+            revert FailedToTransferSpc();
         }
         (bool sent,) = address(pool).call{value: amountEth}("");
         if (!sent) {
@@ -80,7 +83,7 @@ contract SpaceRouter {
     {
         bool success = pool.transferFrom(msg.sender, address(pool), _liquidity);
         if (!success) {
-            revert();
+            revert FailedToTransferLiquidityToPool();
         }
         (ethAmount, spcAmount) = pool.burn(_to);
     }
@@ -109,7 +112,7 @@ contract SpaceRouter {
 
         bool success = spaceCoin.transferFrom(msg.sender, address(pool), _amountSpcIn);
         if (!success) {
-            revert();
+            revert FailedToTransferSpc();
         }
         amountEthOut = pool.swap(_to);
 
