@@ -1,13 +1,8 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-import './SpaceLib.sol';
-import './SpaceCoin.sol';
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import '@uniswap/lib/contracts/libraries/Babylonian.sol';
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./SpaceCoin.sol";
 
 contract Pool is ERC20 {
 
@@ -57,10 +52,10 @@ contract Pool is ERC20 {
         uint totalSupply = totalSupply();
         // first time total supply is 0
         if (totalSupply == 0) {
-            liquidity = Babylonian.sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
+            liquidity = _sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
         }
         else {
-            liquidity = Math.min((amount0 * totalSupply) / _reserve0,
+            liquidity = _min((amount0 * totalSupply) / _reserve0,
                                  (amount1 * totalSupply) / _reserve1);
         }
         require(liquidity > 0, 'INSUFFICIENT_LIQUIDITY_MINTED');
@@ -105,7 +100,9 @@ contract Pool is ERC20 {
             if (amountOut > 0) SpaceCoin(_spaceCoin).transfer(to, amountOut); 
         }
         else {
-            if (amountOut > 0) TransferHelper.safeTransferETH(to, amountOut); 
+            if (amountOut > 0) {
+                (bool sent,) = to.call{value: amountOut}("");
+            }
         }
         balance0 = SpaceCoin(spaceCoin).balanceOf(address(this));
         balance1 = address(this).balance;
@@ -114,6 +111,23 @@ contract Pool is ERC20 {
     }
     
     receive() external payable {}
+
+    function _min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
+    }
+
+    function _sqrt(uint256 y) internal pure returns (uint256 z) {
+        if (y > 3) {
+            z = y;
+            uint256 x = y / 2 + 1;
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
+    }
 
 
 }
