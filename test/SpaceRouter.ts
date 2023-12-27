@@ -230,4 +230,142 @@ describe('SpaceRouter', function () {
       ).to.be.revertedWithCustomError(pool, 'InsufficientLiquidityBurned');
     });
   });
+
+  describe('Swap eth for tokens', function () {
+    it('cannot swap for 0 eth', async function () {
+      await expect(
+        spaceRouter.swapEthForSpc(tokens('1'), owner, { value: 0 })
+      ).to.be.revertedWithCustomError(spaceRouter, 'InsufficientAmount');
+    });
+
+    it('Cannot swap if no reserves', async function () {
+      await expect(
+        spaceRouter.swapEthForSpc(tokens('1'), owner, { value: tokens('5') })
+      ).to.be.revertedWithCustomError(spaceRouter, 'InsufficientLiquidity');
+    });
+
+    it('Spc output less than min', async function () {
+      await ico.connect(addr1).contribute({ value: tokens('1500') });
+      await ico.connect(owner).withdraw(tokens('1500'));
+
+      await spaceCoin
+        .connect(treasury)
+        .approve(spaceRouter.target, tokens('10'));
+      await spaceRouter
+        .connect(treasury)
+        .addLiquidity(treasury.getAddress(), tokens('10'), {
+          value: tokens('1'),
+        });
+      let amountEthWithFee = tokens('1') * 99n;
+      let numerator = amountEthWithFee * (await pool.spcReserve());
+      let denominator = (await pool.ethReserve()) * 100n + amountEthWithFee;
+      let amtSpcOut = numerator / denominator;
+      await expect(
+        spaceRouter.swapEthForSpc(tokens('5'), owner, {
+          value: tokens('1'),
+        })
+      )
+        .to.be.revertedWithCustomError(spaceRouter, 'InsufficientOutputAmount')
+        .withArgs(amtSpcOut, tokens('5'));
+    });
+
+    it('Receiving spc', async function () {
+      await ico.connect(addr1).contribute({ value: tokens('1500') });
+      await ico.connect(owner).withdraw(tokens('1500'));
+
+      await spaceCoin
+        .connect(treasury)
+        .approve(spaceRouter.target, tokens('10'));
+      await spaceRouter
+        .connect(treasury)
+        .addLiquidity(treasury.getAddress(), tokens('10'), {
+          value: tokens('1'),
+        });
+      let amountEthWithFee = tokens('1') * 99n;
+      let numerator = amountEthWithFee * (await pool.spcReserve());
+      let denominator = (await pool.ethReserve()) * 100n + amountEthWithFee;
+      let amtSpcOut = numerator / denominator;
+
+      let beforeEthReserve = await pool.ethReserve();
+      let beforeSpcReserve = await pool.spcReserve();
+
+      await spaceRouter.swapEthForSpc(tokens('4'), owner, {
+        value: tokens('1'),
+      });
+      expect(await pool.ethReserve()).to.equal(beforeEthReserve + tokens('1'));
+      expect(await pool.spcReserve()).to.equal(beforeSpcReserve - amtSpcOut);
+      expect(await spaceCoin.balanceOf(owner)).to.equal(amtSpcOut);
+    });
+  });
+
+  describe('Swap spc for eth', function () {
+    it('cannot swap for 0 spc', async function () {
+      await expect(
+        spaceRouter.swapSpcForEth(0, tokens('1'), owner)
+      ).to.be.revertedWithCustomError(spaceRouter, 'InsufficientAmount');
+    });
+
+    it('Cannot swap if no reserves', async function () {
+      await expect(
+        spaceRouter.swapSpcForEth(tokens('5'), tokens('1'), owner)
+      ).to.be.revertedWithCustomError(spaceRouter, 'InsufficientLiquidity');
+    });
+
+    it('Eth output less than min', async function () {
+      await ico.connect(addr1).contribute({ value: tokens('1500') });
+      await ico.connect(owner).withdraw(tokens('1500'));
+
+      await spaceCoin
+        .connect(treasury)
+        .approve(spaceRouter.target, tokens('20'));
+      await spaceRouter
+        .connect(treasury)
+        .addLiquidity(treasury.getAddress(), tokens('10'), {
+          value: tokens('1'),
+        });
+      let amountSpcWithFee = tokens('10') * 99n;
+      let numerator = amountSpcWithFee * (await pool.ethReserve());
+      let denominator = (await pool.spcReserve()) * 100n + amountSpcWithFee;
+      let amtEthOut = numerator / denominator;
+      await expect(
+        spaceRouter
+          .connect(treasury)
+          .swapSpcForEth(tokens('10'), tokens('1'), owner)
+      )
+        .to.be.revertedWithCustomError(spaceRouter, 'InsufficientOutputAmount')
+        .withArgs(amtEthOut, tokens('1'));
+    });
+
+    it('Receiving eth', async function () {
+      await ico.connect(addr1).contribute({ value: tokens('1500') });
+      await ico.connect(owner).withdraw(tokens('1500'));
+
+      await spaceCoin
+        .connect(treasury)
+        .approve(spaceRouter.target, tokens('20'));
+      await spaceRouter
+        .connect(treasury)
+        .addLiquidity(treasury.getAddress(), tokens('10'), {
+          value: tokens('1'),
+        });
+      let amountSpcWithFee = tokens('5') * 99n;
+      let numerator = amountSpcWithFee * (await pool.ethReserve());
+      let denominator = (await pool.spcReserve()) * 100n + amountSpcWithFee;
+      let amtEthOut = numerator / denominator;
+
+      let beforeEthReserve = await pool.ethReserve();
+      let beforeSpcReserve = await pool.spcReserve();
+
+      let beforeEthBalance = await ethers.provider.getBalance(owner);
+
+      await spaceRouter
+        .connect(treasury)
+        .swapSpcForEth(tokens('5'), tokens('.3'), owner);
+      expect(await pool.ethReserve()).to.equal(beforeEthReserve - amtEthOut);
+      expect(await pool.spcReserve()).to.equal(beforeSpcReserve + tokens('5'));
+      expect(await ethers.provider.getBalance(owner)).to.equal(
+        beforeEthBalance + amtEthOut
+      );
+    });
+  });
 });
