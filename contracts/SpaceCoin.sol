@@ -1,33 +1,55 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-import './SpaceLib.sol';
-import "@openzeppelin/contracts/access/Ownable.sol";
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./SpaceICO.sol";
 
-contract SpaceCoin is ERC20, Ownable {
+/// @title SpaceCoin ERC20 token
+contract SpaceCoin is ERC20("SpaceCoin", "SPC") {
 
-    bool public shouldTax;
-    address public treasury;
-    uint constant public EXCHANGE_RATE = 5;
+    address public immutable treasury;
+    address public immutable owner;
+    address payable public immutable ico;
+    bool public taxEnabled;
 
-    constructor(address _ico, address _treasury) ERC20("Space", "SPC") {
-        uint icoAmount = 2 * ( SpaceLib.ONE_COIN * 30000 * EXCHANGE_RATE);
-        _mint(_ico, icoAmount);                             // ico has 300K space coins
-        _mint(_treasury, SpaceLib.MAX_COINS - icoAmount);   // treasury has 200K space coins
+    event TaxToggled(bool indexed enabled);
+
+    error OnlyOwner(address sender, address owner);
+    error NoChangeInTax();
+
+    /// @notice Mint tokens to the ICO and treasury
+    /// @param _owner The owner of the contract
+    /// @param _treasury The address of the treasury
+    constructor(address _owner, address _treasury, address[] memory _allowList) {
+        owner = _owner;
+        ico = payable(address(new ICO(owner, this, _allowList)));
         treasury = _treasury;
+        _mint(ico, 150_000 * 10 ** decimals());
+        _mint(treasury, 350_000 * 10 ** decimals());
     }
 
-    function _transfer(address sender, address recipient, uint256 amount) internal virtual override {
-        require(amount > 0, "Amount is zero");
-        if (shouldTax) {
-            uint taxAmount = amount * 2 / 100;
-            amount -= taxAmount;
-            super._transfer(sender, treasury, taxAmount);
+    /// @notice Enables or disables the tax
+    /// @dev Only the owner of the contract can call this function
+    function toggleTax(bool _shouldTax) external {
+        if (msg.sender != owner) {
+            revert OnlyOwner(msg.sender, owner);
         }
-        super._transfer(sender, recipient, amount);
+        if (_shouldTax == taxEnabled) {
+            revert NoChangeInTax();
+        }
+        taxEnabled = !taxEnabled;
+        emit TaxToggled(taxEnabled);
     }
 
-    function toggleTax(bool _shouldTax) external onlyOwner {
-        shouldTax = _shouldTax;
-    } 
+    /// @notice If the tax is enabled, 2% of the amount is sent to the treasury
+    /// @param from The address to transfer from
+    /// @param to The address to transfer to
+    /// @param value The amount to transfer
+    function _update(address from, address to, uint256 value) internal virtual override {
+        if (taxEnabled) {
+            uint256 taxAmount = value / 50;
+            value -= taxAmount;
+            super._update(from, treasury, taxAmount);
+        }
+        super._update(from, to, value);
+    }
 }
