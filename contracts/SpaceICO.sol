@@ -1,145 +1,173 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-import './SpaceLib.sol';
-import './SpaceCoin.sol';
-import './Pool.sol';
-import './SpaceRouter.sol';
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import '@uniswap/lib/contracts/libraries/Babylonian.sol';
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.20;
 
-contract SpaceICO is Ownable, Pausable {
-    uint constant public ICO_EXCHANGE_RATE = 5;
-    uint constant public SEED_LIMIT = 15000 ether;
-    uint constant public GENERAL_LIMIT = 30000 ether;
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./SpaceCoin.sol";
 
-    uint constant public SEED_IND_LIMIT = 1500 ether;
-    uint constant public GENERAL_IND_LIMIT = 100 ether;
-
-    SpaceCoin spaceCoin;
-    SpaceRouter sr;
-    address payable lpool;
-    address treasury;
-
-    Phase public phase;
-    uint public totalContributed;
-    mapping(address=>uint) contributions;
-    mapping(address=>bool) isSeedInvestor; 
+/// @title ICO contract
+contract ICO {
 
     enum Phase {
-        Seed,
-        General,
-        Open
+        SEED,
+        GENERAL,
+        OPEN
     }
 
-    constructor(address _lPool, address _treasury) {
-        lpool = payable(_lPool);
-        treasury = _treasury;
-    }
+    uint256 public constant EXCHANGE_RATE = 5;
+    uint256 public constant MAX_INDIVIDUAL_SEED_LIMIT = 1500 ether;
+    uint256 public constant MAX_TOTAL_SEED_LIMIT = 15000 ether;
+    uint256 public constant MAX_INDIVIDUAL_GENERAL_LIMIT = 1000 ether;
+    uint256 public constant MAX_CONTRIBUTION = 30000 ether;
+    SpaceCoin public immutable spaceCoin;
+    address public immutable owner;
+    Phase public phase;
+    uint256 public totalContribution;
+    mapping(address => uint256) public contributions;
+    mapping(address => bool) public allowList;
+    bool public paused;
 
-    function setSpaceCoinAddress(SpaceCoin _spaceCoin) external {
-        require(address(spaceCoin) == address(0x0), "WRITE_ONCE");
+    event Contributed(address indexed contributor, uint256 indexed amount);
+    event Redeemed(address indexed redeemer, uint256 indexed amount);
+    event PhaseAdvanced(Phase indexed newPhase);
+    event Paused();
+    event Unpaused();
+
+    error OnlyOwner(address sender, address owner);
+    error CannotContribute(uint256 amount, uint256 limit);
+    error AlreadyUnpaused();
+    error AlreadyPaused();
+    error CannotRedeem(Phase currentPhase, Phase expectedPhase);
+    error CannotAdvance();
+    error NoContributions();
+    error CannotWithdraw(uint256 amount, uint256 max);
+    error FailedToWithdrawEth();
+    error FailedToTransferSpc();
+
+    /// @param _owner The owner of the contract
+    /// @param _allowList The list of addresses allowed to contribute
+    constructor(address _owner, SpaceCoin _spaceCoin, address[] memory _allowList) {
+        owner = _owner;
         spaceCoin = _spaceCoin;
-    }
-
-    function setSpaceRouterAddress(SpaceRouter _sr) external {
-        require(address(sr) == address(0x0), "WRITE_ONCE");
-        sr = _sr;
-    }
-
-    function toggleSeedInvestors(address[] calldata addresses, bool toggle) external onlyOwner {
-        for (uint i = 0; i < addresses.length; i++) {
-            isSeedInvestor[addresses[i]] = toggle;
+        for (uint i = 0; i < _allowList.length; i++) {
+            allowList[_allowList[i]] = true;
         }
-    } 
-
-    function fundingCapacity() public view returns (uint) {
-        if (phase == Phase.Seed) {
-            return SEED_LIMIT - totalContributed;
-        }
-        if (phase == Phase.General) {
-            return GENERAL_LIMIT - totalContributed;
-        }
-        return ((spaceCoin.balanceOf(address(this)) / 2 ) / ICO_EXCHANGE_RATE) - totalContributed;             // 150K / 5 = 30K 
     }
 
-    function availableForMeToContribute() public view returns (uint) {
-        return availableToContribute(msg.sender);
+    /// @dev Modifier to check if the sender is the owner
+    modifier onlyOwner() {
+        if (msg.sender != owner) {
+            revert OnlyOwner(msg.sender, owner);
+        }
+        _;
     }
 
-    function availableToContribute(address user) public view returns (uint) {
-        uint spent = contributions[user];
-        uint available = fundingCapacity();
+    /// @dev Modifier to check if the contract is paused
+    modifier notPaused() {
+        if (paused) {
+            revert AlreadyPaused();
+        }
+        _;
+    }
 
-        if (phase == Phase.Seed) {
-            if (!isSeedInvestor[msg.sender]) {
+    /// @notice Contributes to the ICO
+    /// @dev The contribution is only allowed if the contract is not paused
+    function contribute() external payable notPaused {
+        if (msg.value > availableToContribute(msg.sender)) {
+            revert CannotContribute(msg.value, availableToContribute(msg.sender));
+        }
+        contributions[msg.sender] += msg.value;
+        totalContribution += msg.value;
+        emit Contributed(msg.sender, msg.value);
+    }
+
+    /// @notice Redeems the tokens
+    /// @dev The tokens can only be redeemed if the contract is not paused and the phase is open
+    function redeem() external notPaused {
+        if (phase != Phase.OPEN) {
+            revert CannotRedeem(phase, Phase.OPEN);
+        }
+        if (contributions[msg.sender] == 0) {
+            revert NoContributions();
+        }
+        uint256 redeemed = contributions[msg.sender] * EXCHANGE_RATE;
+        contributions[msg.sender] = 0;
+        emit Redeemed(msg.sender, redeemed);
+        (bool success) = spaceCoin.transfer(msg.sender, redeemed);
+        if (!success) {
+            revert FailedToTransferSpc();
+        }
+    }
+
+    /// @notice Advances the phase
+    /// @param _current The current phase
+    /// @dev The phase can only be advanced if the sender is the owner
+    function advancePhase(Phase _current) external onlyOwner {
+        if (phase != _current) {
+            revert CannotAdvance();
+        }
+        phase = Phase(uint8(_current) + 1);
+        emit PhaseAdvanced(phase);
+    }
+
+    /// @notice Pauses the contract
+    /// @dev The contract can only be paused if it is not already paused
+    function pause() external onlyOwner notPaused {
+        paused = true;
+        emit Paused();
+    }
+
+    /// @notice Unpauses the contract
+    /// @dev The contract can only be unpaused if it is already paused
+    function unpause() external onlyOwner {
+        if (!paused) {
+            revert AlreadyUnpaused();
+        }
+        paused = false;
+        emit Unpaused();
+    }
+
+    function withdraw(uint256 amount) external onlyOwner {
+        if (address(this).balance < amount) {
+            revert CannotWithdraw(amount, address(this).balance);
+        }
+        (bool sent,) = spaceCoin.treasury().call{value: amount}("");
+        if (!sent) {
+            revert FailedToWithdrawEth();
+        }
+    }
+
+    /// @notice Returns the amount available to contribute for a user
+    /// @param _user The user to check
+    /// @return The amount available to contribute
+    function availableToContribute(address _user) public view returns (uint256) {
+        if (phase == Phase.SEED) {
+            if (!allowList[_user]) {
                 return 0;
             }
-            uint limit = Math.min(available, SEED_IND_LIMIT);
-            return spent >= limit ? 0 : limit - spent;
+            return min(MAX_INDIVIDUAL_SEED_LIMIT - contributions[_user], fundingCapacity());
+        } else if (phase == Phase.GENERAL) {
+            if (contributions[_user] < MAX_INDIVIDUAL_GENERAL_LIMIT) {
+                return min(MAX_INDIVIDUAL_GENERAL_LIMIT - contributions[_user], fundingCapacity());
+            }
+            return 0;
+        } else {
+            return fundingCapacity();
         }
-        if (phase == Phase.General) {
-            uint limit = Math.min(available, GENERAL_IND_LIMIT);
-            return spent >= limit ? 0 : limit - spent;
+    }
+
+    /// @notice Returns the amount of funding capacity left
+    /// @return The amount of funding capacity left
+    function fundingCapacity() public view returns (uint256) {
+        if (phase == Phase.SEED) {
+            return MAX_TOTAL_SEED_LIMIT - totalContribution;
         }
-
-        return available;
+        return MAX_CONTRIBUTION - totalContribution;
     }
 
-    function toGeneral() external onlyOwner {
-        require(phase == Phase.Seed, "INVALID_PHASE");
-        phase = Phase.General;
+    /// @notice Returns the minimum of two numbers
+    /// @param _a The first number
+    /// @param _b The second number
+    function min(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        return _a < _b ? _a : _b;
     }
-
-    function toOpen() external onlyOwner {
-        require(phase == Phase.General, "INVALID_PHASE");
-        phase = Phase.Open;
-    }
-
-   function contribute() external payable {
-       if (phase == Phase.Seed) {
-           require(isSeedInvestor[msg.sender], "UNAUTHORIZED");
-       }
-       uint available = availableForMeToContribute();
-       require(msg.value <= available, "OVER_LIMIT");
-
-       totalContributed += msg.value;
-       contributions[msg.sender] += msg.value;
-       if (phase == Phase.Open) {
-           redeem();
-       }
-   }
-
-   function redeem() public {
-       require(phase == Phase.Open, "UNAUTHORIZED");
-       require(contributions[msg.sender] > 0, "NO_FUNDS");
-
-       uint owed = contributions[msg.sender] * ICO_EXCHANGE_RATE;
-       contributions[msg.sender] = 0;
-       spaceCoin.transfer(msg.sender, owed);
-   }
-
-   function treasuryWithdraw() external {
-       require(msg.sender == treasury, "UNAUTHORIZED");
-       (bool success, ) = treasury.call{ value: address(this).balance }("");
-       require(success, "WITHDRAW_FAILED");
-   }
-
-    // contract has 300K space coins
-    // 
-   function withdrawToPool() external onlyOwner {
-       uint spcTransferAmt = totalContributed * ICO_EXCHANGE_RATE; // get the equivalent amount of space tokens for eth contributed: 150K space coins, 30K ETH
-       spaceCoin.approve(address(sr), spcTransferAmt);
-       (uint liquidity) = sr.addLiquidity{value: totalContributed}(address(spaceCoin), spcTransferAmt, address(this));
-       Pool(lpool).approve(address(sr), liquidity);
-    }
-
-    receive() external payable {}
-
-
-   event PhaseChange(Phase phase);
-   event Contribute(address indexed contributor, Phase indexed phase, uint eth);
-   event Redeem(address indexed contributor, uint tokens);
-
 }
