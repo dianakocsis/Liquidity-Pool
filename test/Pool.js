@@ -1,41 +1,36 @@
-const { expect } = require("chai");
-const { providers } = require("ethers");
-const { ethers } = require("hardhat")
-const { parseEther } = ethers.utils
+const { expect } = require('chai');
+const { providers } = require('ethers');
+const { ethers } = require('hardhat');
+const { parseEther } = ethers;
 
-describe("Pool.sol", function () {
-    let Pool;
-    let pool;
-    let owner;
-    let addr1;
-    let addr2;
-    let ico;
-    let treas;
-  
-    beforeEach(async function () {
-      Pool = await ethers.getContractFactory("Pool");
-      [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
-      pool = await Pool.deploy();
+describe('Pool.sol', function () {
+  let Pool;
+  let pool;
+  let owner;
+  let addr1;
+  let addr2;
+  let ico;
+  let treas;
 
-      SpaceICO = await ethers.getContractFactory("SpaceICO");
-      [owner, ico, treas] = await ethers.getSigners();
-      spaceICO = await SpaceICO.deploy(pool.address, treas.address);
+  beforeEach(async function () {
+    Pool = await ethers.getContractFactory('Pool');
+    [owner, addr1, addr2, ...addrs] = await ethers.getSigners();
+    pool = await Pool.deploy();
 
-      SpaceCoin = await ethers.getContractFactory("SpaceCoin");
-      [owner, ico, treas] = await ethers.getSigners();
-      spaceCoin = await SpaceCoin.deploy(ico.address, treas.address);
+    SpaceICO = await ethers.getContractFactory('SpaceICO');
+    [owner, ico, treas] = await ethers.getSigners();
+    spaceICO = await SpaceICO.deploy(pool.address, treas.address);
 
-      await pool.initialize(spaceCoin.address);
-      
+    SpaceCoin = await ethers.getContractFactory('SpaceCoin');
+    [owner, ico, treas] = await ethers.getSigners();
+    spaceCoin = await SpaceCoin.deploy(ico.address, treas.address);
+
+    await pool.initialize(spaceCoin.address);
+  });
+
+  describe('SpaceCoin token', function () {
+    it('Initialized', async function () {
+      expect(await pool.spaceCoin()).to.equal(spaceCoin.address);
     });
-
-    describe("SpaceCoin token", function () {
-
-        it("Initialized", async function () {
-            expect(await pool.spaceCoin()).to.equal(spaceCoin.address);
-        });
-    
-    });
-    
-
+  });
 });
