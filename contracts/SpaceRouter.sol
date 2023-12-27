@@ -1,12 +1,14 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-import './Pool.sol';
-import './SpaceCoin.sol';
-import '@uniswap/lib/contracts/libraries/TransferHelper.sol';
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.20;
+
+import "./Pool.sol";
+import "./SpaceCoin.sol";
 
 contract SpaceRouter {
 
     address payable pool;
+
+    error FailedToSendEther();
 
     constructor(address _pool) {
         pool = payable(_pool);
@@ -42,7 +44,6 @@ contract SpaceRouter {
             msg.sender, pool, amountIn
         );
         Pool(pool).swap(amount, address(this), 0);
-        TransferHelper.safeTransferETH(to, amount);
     }
 
     function swapExactETHForTokens(
@@ -50,7 +51,10 @@ contract SpaceRouter {
         address to
     ) external payable returns (uint amount) {
         amount = _getOut(msg.value);
-        TransferHelper.safeTransferETH(pool, msg.value);
+        (bool sent,) = pool.call{value: msg.value}("");
+        if (!sent) {
+            revert FailedToSendEther();
+        }
         Pool(pool).swap(amount, address(this), msg.value);
         SpaceCoin(token).transfer(to, amount);
     }
