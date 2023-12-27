@@ -6,12 +6,14 @@ import "./SpaceCoin.sol";
 
 contract SpaceRouter {
 
-    address payable pool;
+    Pool public immutable pool;
+    SpaceCoin public immutable spaceCoin;
 
     error FailedToSendEther();
 
-    constructor(address _pool) {
-        pool = payable(_pool);
+    constructor(Pool _lp, SpaceCoin _spaceCoin) {
+        pool = _lp;
+        spaceCoin = _spaceCoin;
     }
 
     function addLiquidity(
@@ -19,8 +21,8 @@ contract SpaceRouter {
         uint amountToken,
         address to
     ) external payable returns (uint liquidity) {
-        SpaceCoin(token).transferFrom(msg.sender, pool, amountToken);       // transfer amountSpc tokens from msg.sender to the pool
-        (bool success, ) = pool.call{ value: msg.value }("");                        // transfer eth (msg.value) to the pool
+        SpaceCoin(token).transferFrom(msg.sender, address(pool), amountToken);       // transfer amountSpc tokens from msg.sender to the pool
+        (bool success, ) = address(pool).call{ value: msg.value }("");                        // transfer eth (msg.value) to the pool
         require(success, "WITHDRAW_FAILED");
         liquidity = Pool(pool).mint(to);                                             // mint LP tokens for the liquidity provider
     }
@@ -30,7 +32,7 @@ contract SpaceRouter {
         uint liquidity,
         address to
     ) public returns (uint amount0, uint amount1) {
-        Pool(pool).transferFrom(msg.sender, pool, liquidity); // send liquidity to pool
+        Pool(pool).transferFrom(msg.sender, address(pool), liquidity); // send liquidity to pool
         (amount0, amount1) = Pool(pool).burn(to);
     }
 
@@ -41,7 +43,7 @@ contract SpaceRouter {
     ) external returns (uint amount) {
         amount = _getOut(amountIn);
         SpaceCoin(token).transferFrom(
-            msg.sender, pool, amountIn
+            msg.sender, address(pool), amountIn
         );
         Pool(pool).swap(amount, address(this), 0);
     }
@@ -51,7 +53,7 @@ contract SpaceRouter {
         address to
     ) external payable returns (uint amount) {
         amount = _getOut(msg.value);
-        (bool sent,) = pool.call{value: msg.value}("");
+        (bool sent,) = address(pool).call{value: msg.value}("");
         if (!sent) {
             revert FailedToSendEther();
         }
@@ -77,5 +79,5 @@ contract SpaceRouter {
     }
 
     receive() external payable {}
- 
+
 }

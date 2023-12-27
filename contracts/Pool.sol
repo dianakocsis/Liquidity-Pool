@@ -6,8 +6,8 @@ import "./SpaceCoin.sol";
 
 contract Pool is ERC20 {
 
+    SpaceCoin public immutable spaceCoin;
     uint public constant MINIMUM_LIQUIDITY = 10**3;
-    address public spaceCoin;
     uint112 private reserve0;           
     uint112 private reserve1;
 
@@ -28,11 +28,7 @@ contract Pool is ERC20 {
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
     event Sync(uint112 reserve0, uint112 reserve1);
 
-    constructor() ERC20("Space LP Token", "SPCLP"){
-    }
-
-    function initialize(address _spaceCoin) external {
-        require(spaceCoin == address(0x0), "WRITE_ONCE");
+    constructor(string memory _name, string memory _symbol, SpaceCoin _spaceCoin) ERC20(_name, _symbol) {
         spaceCoin = _spaceCoin;
     }
 
@@ -94,10 +90,9 @@ contract Pool is ERC20 {
         uint balance0;
         uint balance1;
         
-        address _spaceCoin = spaceCoin;
-        require(to != _spaceCoin, 'INVALID_TO');
+        require(to != address(spaceCoin), 'INVALID_TO');
         if (value > 0) {
-            if (amountOut > 0) SpaceCoin(_spaceCoin).transfer(to, amountOut); 
+            if (amountOut > 0) SpaceCoin(address(spaceCoin)).transfer(to, amountOut); 
         }
         else {
             if (amountOut > 0) {
