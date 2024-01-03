@@ -56,11 +56,7 @@ contract SpaceRouter {
         if (!success) {
             revert FailedToTransferSpc();
         }
-        (bool sent,) = address(pool).call{value: amountEth}("");
-        if (!sent) {
-            revert FailedToSendEther();
-        }
-        liquidity = pool.mint(_to);
+        liquidity = pool.mint{value: amountEth}(_to);
         if (msg.value > amountEth) {
             (success,) = msg.sender.call{value: msg.value - amountEth}("");
             if (!success) {
@@ -141,11 +137,7 @@ contract SpaceRouter {
             revert InsufficientLiquidity();
         }
 
-        (bool sent,) = address(pool).call{value: msg.value}("");
-        if (!sent) {
-            revert FailedToSendEther();
-        }
-        amountSpcOut = pool.swap(_to);
+        amountSpcOut = pool.swap{value: msg.value}(_to);
         if (amountSpcOut < _minSpcOut) {
             revert InsufficientOutputAmount(amountSpcOut, _minSpcOut);
         }

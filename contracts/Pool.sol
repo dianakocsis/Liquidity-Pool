@@ -36,7 +36,7 @@ contract Pool is ERC20 {
     /// @notice Mints liquidity tokens
     /// @param _to The address to mint to
     /// @return liquidity The amount of liquidity tokens minted
-    function mint(address _to) external returns (uint256 liquidity) {
+    function mint(address _to) external payable returns (uint256 liquidity) {
         uint256 ethBalance = address(this).balance;
         uint256 spcBalance = spaceCoin.balanceOf(address(this));
         uint256 ethAmount = ethBalance - ethReserve;
@@ -98,7 +98,7 @@ contract Pool is ERC20 {
     /// @notice Swaps ether for SpaceCoin or SpaceCoin for ether
     /// @param _to The address to send the tokens or ether to
     /// @return out The amount of ether or SpaceCoin sent
-    function swap(address _to) external returns (uint256 out) {
+    function swap(address _to) external payable returns (uint256 out) {
         uint256 ethBalance = address(this).balance;
         uint256 spcBalance = spaceCoin.balanceOf(address(this));
         uint256 ethAmount = ethBalance - ethReserve;
@@ -126,11 +126,7 @@ contract Pool is ERC20 {
                 revert FailedToSendEther();
             }
         }
-
     }
-
-    /// @notice Allows the contract to receive ether
-    receive() external payable {}
 
     /// @notice Determines the minimum of two values
     /// @param a The first value
