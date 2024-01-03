@@ -47,11 +47,14 @@ contract Pool is ERC20 {
     /// @notice Mints liquidity tokens
     /// @param _to The address to mint to
     /// @return liquidity The amount of liquidity tokens minted
-    function mint(address _to) external nonReentrant returns (uint256 liquidity) {
+    function mint(address _to) external returns (uint256 liquidity) {
         uint256 ethBalance = address(this).balance;
         uint256 spcBalance = spaceCoin.balanceOf(address(this));
         uint256 ethAmount = ethBalance - ethReserve;
         uint256 spcAmount = spcBalance - spcReserve;
+
+        ethReserve = ethBalance;
+        spcReserve = spcBalance;
 
         emit Mint(msg.sender, ethAmount, spcAmount);
 
@@ -64,9 +67,6 @@ contract Pool is ERC20 {
             );
         }
 
-        ethReserve = ethBalance;
-        spcReserve = spcBalance;
-
         _mint(_to, liquidity);
     }
 
@@ -74,7 +74,7 @@ contract Pool is ERC20 {
     /// @param _to The address to send the tokens and ether to
     /// @return ethAmount The amount of ether sent
     /// @return spcAmount The amount of SpaceCoin sent
-    function burn(address _to) external nonReentrant returns (uint256 ethAmount, uint256 spcAmount) {
+    function burn(address _to) external returns (uint256 ethAmount, uint256 spcAmount) {
         uint256 ethBalance = address(this).balance;
         uint256 spcBalance = spaceCoin.balanceOf(address(this));
         uint256 liquidity = balanceOf(address(this));
@@ -86,6 +86,9 @@ contract Pool is ERC20 {
         if (ethAmount == 0 || spcAmount == 0) {
             revert InsufficientLiquidityBurned();
         }
+
+        ethReserve = address(this).balance - ethAmount;
+        spcReserve = spaceCoin.balanceOf(address(this));
 
         emit Burn(msg.sender, ethAmount, spcAmount, _to);
 
@@ -101,14 +104,12 @@ contract Pool is ERC20 {
             revert FailedToSendEther();
         }
 
-        ethReserve = address(this).balance;
-        spcReserve = spaceCoin.balanceOf(address(this));
     }
 
     /// @notice Swaps ether for SpaceCoin or SpaceCoin for ether
     /// @param _to The address to send the tokens or ether to
     /// @return out The amount of ether or SpaceCoin sent
-    function swap(address _to) external nonReentrant returns (uint256 out) {
+    function swap(address _to) external returns (uint256 out) {
         uint256 ethBalance = address(this).balance;
         uint256 spcBalance = spaceCoin.balanceOf(address(this));
         uint256 ethAmount = ethBalance - ethReserve;
@@ -118,6 +119,8 @@ contract Pool is ERC20 {
             uint256 numerator = amountEthWithFee * spcReserve;
             uint256 denominator = ethReserve * 100 + amountEthWithFee;
             out = (numerator / denominator);
+            spcReserve = spaceCoin.balanceOf(address(this)) - out;
+            ethReserve = address(this).balance;
             bool success = spaceCoin.transfer(_to, out);
             if (!success) {
                 revert FailedToTransferSpc();
@@ -127,14 +130,14 @@ contract Pool is ERC20 {
             uint256 numerator = amountSpcWithFee * ethReserve;
             uint256 denominator = spcReserve * 100 + amountSpcWithFee;
             out = (numerator / denominator);
+            ethReserve = address(this).balance - out;
+            spcReserve = spaceCoin.balanceOf(address(this));
             (bool sent,) = _to.call{value: out}("");
             if (!sent) {
                 revert FailedToSendEther();
             }
         }
 
-        ethReserve = address(this).balance;
-        spcReserve = spaceCoin.balanceOf(address(this));
     }
 
     /// @notice Allows the contract to receive ether
