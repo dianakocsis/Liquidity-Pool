@@ -42,7 +42,7 @@ contract SpaceRouter {
             (amountEth, amountSpc) = (msg.value, _amountSpc);
         } else {
             amountSpc = msg.value * spcReserve / ethReserve;
-            if (_amountSpc <= amountSpc) {
+            if (_amountSpc < amountSpc) {
                 amountEth = _amountSpc * ethReserve / spcReserve;
                 amountSpc = _amountSpc;
             }
