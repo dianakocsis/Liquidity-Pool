@@ -15,7 +15,6 @@ contract Pool is ERC20 {
     event Mint(address indexed sender, uint256  ethAmount, uint256  spcAmount);
     event Burn(address indexed sender, uint256  ethAmount, uint256  spcAmount, address indexed to);
 
-    error NoReentrancy();
     error InsufficientLiquidity();
     error InsufficientLiquidityBurned();
     error FailedToSendEther();
@@ -27,16 +26,6 @@ contract Pool is ERC20 {
     /// @param _spaceCoin The SpaceCoin contract
     constructor(string memory _name, string memory _symbol, SpaceCoin _spaceCoin) ERC20(_name, _symbol) {
         spaceCoin = _spaceCoin;
-    }
-
-    /// @dev Modifier to check if the contract is locked
-    modifier nonReentrant() {
-        if (locked) {
-            revert NoReentrancy();
-        }
-        locked = true;
-        _;
-        locked = false;
     }
 
     /// @notice Gets the reserves of the pool
