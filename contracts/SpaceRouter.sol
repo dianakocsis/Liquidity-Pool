@@ -48,7 +48,7 @@ contract SpaceRouter {
             }
 
             if (spaceCoin.taxEnabled()) {
-                uint256 spaceCoinDepositedAfterTax = (_amountSpc * 98) / 100;
+                uint256 spaceCoinDepositedAfterTax = (amountSpc * 98) / 100;
                 amountEth = spaceCoinDepositedAfterTax * ethReserve / spcReserve;
             }
          }
