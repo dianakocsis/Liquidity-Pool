@@ -100,9 +100,7 @@ describe('SpaceRouter', function () {
       expect(await ethers.provider.getBalance(pool.getAddress())).to.equal(
         tokens('1')
       );
-      expect(await pool.balanceOf(treasury)).to.equal(
-        sqrt(tokens('5') * tokens('1'))
-      );
+      expect(await pool.balanceOf(treasury)).to.equal(tokens('1'));
       expect(await pool.ethReserve()).to.equal(ethReserve + tokens('1'));
       expect(await pool.spcReserve()).to.equal(spcReserve + tokens('5'));
     });
@@ -255,7 +253,7 @@ describe('SpaceRouter', function () {
         });
       await pool.connect(treasury).approve(spaceRouter.target, tokens('5'));
       await expect(
-        spaceRouter.connect(treasury).removeLiquidity(1n, treasury.address)
+        spaceRouter.connect(treasury).removeLiquidity(0n, treasury.address)
       ).to.be.revertedWithCustomError(pool, 'InsufficientLiquidityBurned');
     });
   });

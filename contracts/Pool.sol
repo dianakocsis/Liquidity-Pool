@@ -48,7 +48,7 @@ contract Pool is ERC20 {
         emit Mint(msg.sender, ethAmount, spcAmount);
 
         if (totalSupply() == 0) {
-            liquidity = _sqrt(ethAmount * spcAmount);
+            liquidity = ethAmount;
         } else {
             liquidity = _min(
                 ethAmount * totalSupply() / ethReserve,
